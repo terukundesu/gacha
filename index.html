@@ -3,91 +3,162 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>演出付きガチャ</title>
+    <title>超豪華演出ガチャ</title>
     <style>
         body {
             font-family: sans-serif;
-            background: #f0f2f5;
+            background: #0f172a;
+            color: white;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             height: 100vh;
             margin: 0;
+            overflow: hidden;
         }
         .gacha-container {
-            background: white;
-            padding: 30px;
-            border-radius: 12px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            background: #1e293b;
+            padding: 40px;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
             text-align: center;
-            width: 300px;
+            width: 340px;
+            border: 2px solid #334155;
         }
         button {
-            background: #ff4757;
+            background: linear-gradient(135deg, #f59e0b, #ef4444);
             color: white;
             border: none;
-            padding: 12px 24px;
+            padding: 14px 28px;
             font-size: 18px;
             font-weight: bold;
             border-radius: 30px;
             cursor: pointer;
             transition: 0.2s;
+            box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4);
         }
         button:hover {
-            background: #ff6b81;
+            transform: scale(1.05);
+        }
+        button:disabled {
+            background: #475569;
+            cursor: not-allowed;
+            box-shadow: none;
+            transform: none;
         }
         #result {
-            margin-top: 20px;
-            font-size: 22px;
+            margin-top: 25px;
+            font-size: 20px;
             font-weight: bold;
-            min-height: 40px;
+            min-height: 80px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
         }
-        /* 演出用のアニメーション */
-        .shake {
-            animation: shake 0.5s ease-in-out;
+        /* プログレスバー（ゲージ）のスタイル */
+        .progress-box {
+            width: 100%;
+            background: #334155;
+            border-radius: 10px;
+            height: 12px;
+            margin-top: 20px;
+            overflow: hidden;
+            display: none;
         }
-        @keyframes shake {
-            0% { transform: translate(1px, 1px) rotate(0deg); }
-            20% { transform: translate(-3px, 0px) rotate(-1deg); }
-            40% { transform: translate(1px, -1px) rotate(1deg); }
-            60% { transform: translate(-3px, 1px) rotate(0deg); }
-            80% { transform: translate(1px, -1px) rotate(-1deg); }
-            100% { transform: translate(0, 0) rotate(0deg); }
+        .progress-bar {
+            width: 0%;
+            height: 100%;
+            background: linear-gradient(90deg, #38bdf8, #a855f7, #ec4899);
+            transition: width 0.5s linear;
+        }
+        /* レアリティごとの派手な演出 */
+        .normal-anim {
+            color: #94a3b8;
+        }
+        .rare-anim {
+            color: #38bdf8;
+            text-shadow: 0 0 10px rgba(56, 189, 248, 0.5);
+        }
+        .ssr-anim {
+            color: #facc15;
+            text-shadow: 0 0 20px #ef4444, 0 0 40px #facc15;
+            animation: pulse-ssr 0.8s infinite alternate;
+        }
+        @keyframes pulse-ssr {
+            0% { transform: scale(1); filter: brightness(1); }
+            100% { transform: scale(1.08); filter: brightness(1.3); }
         }
     </style>
 </head>
 <body>
 
     <div class="gacha-container" id="container">
-        <h2>✨ 言葉ガチャ ✨</h2>
-        <button onclick="drawGacha()">ガチャを回す</button>
+        <h2>✨ 超豪華 言葉ガチャ ✨</h2>
+        <button id="gachaBtn" onclick="drawGacha()">ガチャを回す (20秒演出)</button>
+        
+        <div class="progress-box" id="progressBox">
+            <div class="progress-bar" id="progressBar"></div>
+        </div>
+
         <div id="result"></div>
     </div>
 
     <script>
-        const words = [
-            "「継続は力なり！」",
-            "「今日は思い切って休もう！」",
-            "「新しい挑戦の予感…！」",
-            "「大吉：最高の一日になるでしょう！」",
-            "「一歩ずつ進めば大丈夫！」"
+        const gachaPool = [
+            { text: "【ノーマル】「コツコツが勝つコツ！」", rarity: "N", rate: 70, class: "normal-anim" },
+            { text: "🌟【レア】「今日のあなたは一味違う！」🌟", rarity: "R", rate: 25, class: "rare-anim" },
+            { text: "✨🔥【SSR】「奇跡降臨！世界はあなたの手の中に！！」🔥✨", rarity: "SSR", rate: 5, class: "ssr-anim" }
         ];
 
         function drawGacha() {
-            const container = document.getElementById("container");
+            const btn = document.getElementById("gachaBtn");
             const resultDiv = document.getElementById("result");
-            
-            // ガチャを回している演出（文字を消して揺らす）
-            resultDiv.innerHTML = "シャカシャカ…📦";
-            container.classList.add("shake");
+            const progressBox = document.getElementById("progressBox");
+            const progressBar = document.getElementById("progressBar");
 
+            btn.disabled = true;
+            progressBox.style.display = "block";
+            progressBar.style.width = "0%";
+
+            // 抽選をあらかじめ終わらせておく
+            const randomNum = Math.random() * 100;
+            let currentSum = 0;
+            let selectedItem = gachaPool[0];
+            for (let item of gachaPool) {
+                currentSum += item.rate;
+                if (randomNum <= currentSum) {
+                    selectedItem = item;
+                    break;
+                }
+            }
+
+            // 20秒間かけて段階的に演出を進めるメッセージ
+            const steps = [
+                { time: 0, text: "📦 ガチャが起動した…！エネルギー充填中", progress: 5 },
+                { time: 3000, text: "⚡ 魔力が1つ目のゲートを突破した…！", progress: 20 },
+                { time: 7000, text: "🌀 時空のゆがみが発生中…何かが起きる…！", progress: 45 },
+                { time: 12000, text: "💫 レアリティの壁を突破しています…！", progress: 70 },
+                { time: 16000, text: "🔥 運命の扉が開く…！最終セレクト中…！", progress: 90 },
+                { time: 19000, text: "✨ 3・2・1……オープン！", progress: 100 }
+            ];
+
+            steps.forEach(step => {
+                setTimeout(() => {
+                    resultDiv.innerHTML = step.text;
+                    resultDiv.className = "";
+                    progressBar.style.width = step.progress + "%";
+                }, step.time);
+            });
+
+            // 20秒後（20000ミリ秒）に最終結果を表示
             setTimeout(() => {
-                container.classList.remove("shake");
-                // ランダムに言葉を選ぶ
-                const randomIndex = Math.floor(Math.random() * words.length);
-                resultDiv.innerHTML = words[randomIndex];
-            }, 500); // 0.5秒後に結果を表示
+                resultDiv.innerHTML = selectedItem.text;
+                resultDiv.className = selectedItem.class;
+                btn.disabled = false;
+                progressBox.style.display = "none";
+            }, 20000);
         }
     </script>
 
